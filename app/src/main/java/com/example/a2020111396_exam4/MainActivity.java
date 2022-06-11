@@ -1,11 +1,12 @@
 package com.example.a2020111396_exam4;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.app.DatePickerDialog;
-import android.content.ContentValues;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
@@ -20,7 +21,6 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
@@ -30,6 +30,7 @@ import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,6 +38,7 @@ import java.util.Map;
 public class MainActivity extends AppCompatActivity {
     Button viewBtn;
     Button changeBtn;
+    RecyclerView recyclerView;
     TextView textView;
     Button dateBtn;
     String city = "";
@@ -45,6 +47,10 @@ public class MainActivity extends AppCompatActivity {
     String dayStr = "";
     String dateStr = "";
     static RequestQueue queue;
+    private ArrayList<Dictionary> myArrayList;
+    private CustomAdapter myAdapter;
+    private int count=-1;
+
     String url = "http://sc1.swu.ac.kr/~kyung128/covid19app.jsp";
     String[] items = {"강원", "경기", "경남", "경북", "광주", "대구", "대전", "부산",
     "서울", "세종", "울산", "인천", "전남", "전북", "제주", "충남", "충북", "전체"};
@@ -54,9 +60,21 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        RecyclerView myRecyclerView = (RecyclerView) findViewById(R.id.recyclerView);
+        LinearLayoutManager mLinearLayoutManager = new LinearLayoutManager(this);
+        myRecyclerView.setLayoutManager(mLinearLayoutManager);
+        myArrayList = new ArrayList<>();
+        myAdapter = new CustomAdapter(myArrayList);
+        myRecyclerView.setAdapter(myAdapter);
+
+        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(myRecyclerView.getContext(),
+                mLinearLayoutManager.getOrientation());
+        myRecyclerView.addItemDecoration(dividerItemDecoration);
+
+
         viewBtn = findViewById(R.id.viewBtn);
         changeBtn = findViewById(R.id.changeBtn);
-        textView = findViewById(R.id.textView);
+        recyclerView = findViewById(R.id.recyclerView);
         dateBtn = findViewById(R.id.dateBtn);
 
         // RequestQueue 객체 생성 (정보 받을 때 사용)
@@ -128,11 +146,41 @@ public class MainActivity extends AppCompatActivity {
                 }
                 try {
                     makeRequest(covidObj);
+
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
             }
         });
+    }
+
+    public void jsonParse(String response) {
+        try {
+            String city;
+            String stdDay;
+            String defCnt;
+            String deathCnt;
+            String localCnt;
+            String overflowCnt;
+
+            JSONObject jsonObj = new JSONObject(response);
+            JSONArray jsonArr = jsonObj.getJSONArray("COVID19");
+            for (int i=0; i<jsonArr.length(); i++) {
+                JSONObject obj = jsonArr.getJSONObject(i);
+                city = obj.getString("city");
+                stdDay = obj.getString("stdDay");
+                defCnt = obj.getString("defCnt");
+                deathCnt = obj.getString("deathCnt");
+                localCnt = obj.getString("localCnt");
+                overflowCnt = obj.getString("overflowCnt");
+
+                Dictionary data = new Dictionary(city, stdDay, defCnt, deathCnt, localCnt, overflowCnt);
+                myArrayList.add(data);
+                myAdapter.notifyDataSetChanged();
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     // 서버로부터 데이터 받기
@@ -142,22 +190,7 @@ public class MainActivity extends AppCompatActivity {
         StringRequest request = new StringRequest(Request.Method.GET, strUrl, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                try {
-                    JSONObject jsonObj = new JSONObject(response);
-                    JSONArray jsonArr = jsonObj.getJSONArray("COVID19");
-                    for (int i=0; i<jsonArr.length(); i++) {
-                        JSONObject obj = jsonArr.getJSONObject(i);
-                        println("도시명: " + obj.getString("city"));
-                        println("기준 일시: " + obj.getString("stdDay"));
-                        println("확진자 수: " + obj.getString("defCnt"));
-                        println("사망자 수: " + obj.getString("deathCnt"));
-                        println("해외유입: " + obj.getString("overflowCnt"));
-                        println("국내 발생: " + obj.getString("localCnt"));
-                        println("====================");
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                jsonParse(response);
             }
         }, new Response.ErrorListener() {
             @Override

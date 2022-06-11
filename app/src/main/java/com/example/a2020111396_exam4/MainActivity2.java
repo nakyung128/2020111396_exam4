@@ -1,6 +1,9 @@
 package com.example.a2020111396_exam4;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
 import android.view.View;
@@ -10,6 +13,7 @@ import android.app.DatePickerDialog;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,18 +46,31 @@ public class MainActivity2 extends AppCompatActivity {
     Button start;
     Button end;
     Button backBtn;
-    TextView tvLog;
+
+    private ArrayList<Dictionary> myArrayList;
+    private CustomAdapter myAdapter;
+    private int count=-1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main2);
 
+        RecyclerView myRecyclerView = (RecyclerView) findViewById(R.id.recyclerView);
+        LinearLayoutManager mLinearLayoutManager = new LinearLayoutManager(this);
+        myRecyclerView.setLayoutManager(mLinearLayoutManager);
+        myArrayList = new ArrayList<>();
+        myAdapter = new CustomAdapter(myArrayList);
+        myRecyclerView.setAdapter(myAdapter);
+
+        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(myRecyclerView.getContext(),
+                mLinearLayoutManager.getOrientation());
+        myRecyclerView.addItemDecoration(dividerItemDecoration);
+
         okBtn = findViewById(R.id.okBtn);
         start = findViewById(R.id.startDate);
         end = findViewById(R.id.endDate);
         backBtn = findViewById(R.id.backBtn);
-        tvLog = findViewById(R.id.tvLog);
 
         // RequestQueue 객체 생성 (정보 받을 때 사용)
         if (queue == null) {
@@ -141,33 +158,46 @@ public class MainActivity2 extends AppCompatActivity {
             }
         });
     }
+    public void jsonParse(String response) {
+        try {
+            String city;
+            String stdDay;
+            String defCnt;
+            String deathCnt;
+            String localCnt;
+            String overflowCnt;
+
+            JSONObject jsonObj = new JSONObject(response);
+            JSONArray jsonArr = jsonObj.getJSONArray("COVID19");
+            for (int i=0; i<jsonArr.length(); i++) {
+                JSONObject obj = jsonArr.getJSONObject(i);
+                city = obj.getString("city");
+                stdDay = obj.getString("stdDay");
+                defCnt = obj.getString("defCnt");
+                deathCnt = obj.getString("deathCnt");
+                localCnt = obj.getString("localCnt");
+                overflowCnt = obj.getString("overflowCnt");
+
+                Dictionary data = new Dictionary(city, stdDay, defCnt, deathCnt, localCnt, overflowCnt);
+                myArrayList.add(data);
+                myAdapter.notifyDataSetChanged();
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
     public void makeRequest(JSONObject obj) throws UnsupportedEncodingException {
         String strUrl = url + "?searchparas=" + URLEncoder.encode(obj.toString(), "UTF-8");
         System.out.println(strUrl);
         StringRequest request = new StringRequest(Request.Method.GET, strUrl, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                try {
-                    JSONObject jsonObj = new JSONObject(response);
-                    JSONArray jsonArr = jsonObj.getJSONArray("COVID19");
-                    for (int i=0; i<jsonArr.length(); i++) {
-                        JSONObject obj = jsonArr.getJSONObject(i);
-                        println("도시명: " + obj.getString("city"));
-                        println("기준 일시: " + obj.getString("stdDay"));
-                        println("확진자 수: " + obj.getString("defCnt"));
-                        println("사망자 수: " + obj.getString("deathCnt"));
-                        println("해외유입: " + obj.getString("overflowCnt"));
-                        println("국내 발생: " + obj.getString("localCnt"));
-                        println("====================");
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                jsonParse(response);
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                println("에러-> " + error.getMessage());
+                System.out.println("에러-> " + error.getMessage());
             }
         }) {
             @Override
@@ -178,8 +208,5 @@ public class MainActivity2 extends AppCompatActivity {
         };
         request.setShouldCache(false);
         queue.add(request);
-    }
-    public void println(String data) {
-        tvLog.append(data + "\n");
     }
 }
