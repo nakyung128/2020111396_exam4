@@ -39,7 +39,6 @@ public class MainActivity extends AppCompatActivity {
     Button viewBtn;
     Button changeBtn;
     RecyclerView recyclerView;
-    TextView textView;
     Button dateBtn;
     String city = "";
     String yearStr = "";
@@ -195,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                println("에러-> " + error.getMessage());
+                System.out.println("에러-> " + error.getMessage());
             }
         }) {
             @Override
@@ -206,8 +205,5 @@ public class MainActivity extends AppCompatActivity {
         };
         request.setShouldCache(false);
         queue.add(request);
-    }
-    public void println(String data) {
-        textView.append(data + "\n");
     }
 }
